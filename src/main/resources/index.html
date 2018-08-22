@@ -831,7 +831,7 @@ limitations under the License.
             }
         }
 
-        onKeyPress(keyCode) {
+        onKeyPress(keyCode, searchController) {
             let SCROLL_JUMP = 200;
             let SCALE_JUMP = 4;
             if (keyCode === 65) { // a
@@ -846,6 +846,10 @@ limitations under the License.
                 let boundingRect = canvas.getBoundingClientRect();
                 this._scale(-SCALE_JUMP, (boundingRect.left + boundingRect.right) / 2 * PIXEL_RATIO,
                     boundingRect.top + boundingRect.height / 2 * PIXEL_RATIO);
+            } else if (keyCode === 78) { // n (next)
+                searchController.selectNext();
+            } else if (keyCode === 80) { // p (prev)
+                searchController.selectPrev();
             } else {
                 return false;
             }
@@ -1445,6 +1449,7 @@ limitations under the License.
             });
             this.onSelected = () => {
             };
+            this.selectId = 0;
         }
 
         onIconClick() {
@@ -1481,13 +1486,38 @@ limitations under the License.
         }
 
         _close() {
+            // this.mMethod = null;
             this.modalEl.style.display = "none";
         }
 
         _select(method) {
+            this.mMethod = method;
+            this.selectId = 0;
             this.inputEl.value = "";
             this.clearResults();
             this.onSelected(method);
+            this._close();
+        }
+
+        selectNext() {
+            if (!this.mMethod) {
+                return;
+            }
+            this.inputEl.value = "";
+            this.clearResults();
+            this.selectId++;
+            this.onSelectedOffset(this.mMethod, this.selectId);
+            this._close();
+        }
+
+        selectPrev() {
+            if (!this.mMethod) {
+                return;
+            }
+            this.inputEl.value = "";
+            this.clearResults();
+            this.selectId--;
+            this.onSelectedOffset(this.mMethod, this.selectId);
             this._close();
         }
     }
@@ -1515,7 +1545,17 @@ limitations under the License.
                 let firstCall = method.getCallAt(0);
                 this._selectCall(firstCall);
                 this._refreshCanvas();
-            }
+            };
+            this.searchController.onSelectedOffset = (method, offsetId) => {
+                let newOffsetId = offsetId % method.calls.length;
+                if (newOffsetId < 0) {
+                    newOffsetId = newOffsetId + method.calls.length;
+                }
+                console.log('offsetid = ', newOffsetId, ', method.calls.length = ', method.calls.length);
+                let offsetCall = method.getCallAt(newOffsetId);
+                this._selectCall(offsetCall);
+                this._refreshCanvas();
+            };
         }
 
         loadEmbeddedData() {
@@ -1540,7 +1580,7 @@ limitations under the License.
             if (document.activeElement === document.getElementById('search')) {
                 return false;
             }
-            if (this.transform.onKeyPress(keycode)) {
+            if (this.transform.onKeyPress(keycode, this.searchController)) {
                 this._refreshCanvas();
                 return true;
             }
